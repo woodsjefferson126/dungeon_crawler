@@ -110,8 +110,9 @@ git commit -m "Initial project setup"
 - Allow player to input movement commands (`n`, `s`, `e`, `w`, `u`, `d`).
 - Validate commands and display funny error if invalid.
 - Display room description and available exits.
+- Some rooms are marked "dark." Player must have a torch to see their description. Without a torch, players see: "It's too dark to proceed."
 - Add appropriate unit and integration tests.
-- - Some rooms are marked "dark." Player must have a torch to see their description. Without a torch, players see: "It's too dark to proceed."
+
 
 **Milestone:** Basic dungeon navigation working.
 
@@ -200,3 +201,7 @@ git commit -m "Initial project setup"
 - Package final version.
 - (Optional) Add extra visual upgrades with `rich`.
 
+## Future enhancements
+
+- Features, see designdoc
+- Extended testing including coverage report
