@@ -30,8 +30,18 @@
   - Map generation
 - **Key Classes:**
   - `Room`: Individual room data
+    - Properties: id, title, description, exits, dark, items, enemy, npc
+    - Methods: display_info(), validate_exit()
   - `World`: Overall dungeon structure
-  - `MapGenerator`: Procedural generation
+    - Properties: rooms (dict), current_room
+    - Methods: load_rooms(), move_player(), get_room()
+  - `MapGenerator`: Procedural generation (future implementation)
+- **Implementation Details:**
+  - Room data stored in JSON format
+  - Color-coded room display (yellow title, white description, cyan exits)
+  - Dark room mechanics requiring torch
+  - Validated movement system with compass directions
+  - Unit tests for room loading and movement
 
 ### 4. Combat System (`combat.py`)
 - **Responsibilities:**

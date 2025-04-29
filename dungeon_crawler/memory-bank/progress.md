@@ -30,13 +30,13 @@
 - [x] Unit tests
 
 ### Phase 3: Core Movement System
-- [ ] Room data structure
-- [ ] JSON room loading
-- [ ] Movement commands
-- [ ] Room description display
-- [ ] Exit validation
-- [ ] Dark room mechanics
-- [ ] Unit tests
+- [x] Room data structure
+- [x] JSON room loading
+- [x] Movement commands
+- [x] Room description display
+- [x] Exit validation
+- [x] Dark room mechanics
+- [x] Unit tests
 
 ### Phase 4: Health and Combat System
 - [ ] Player health tracking
@@ -91,9 +91,9 @@
 - None identified yet
 
 ### Next Steps
-1. Complete project setup
-2. Implement basic game engine
-3. Add initial testing framework
+1. Begin implementation of Health and Combat System
+2. Create Enemy class and combat mechanics
+3. Implement class-based damage calculations
 
 ## 📅 Timeline
 
