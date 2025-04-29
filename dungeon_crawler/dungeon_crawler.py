@@ -294,16 +294,6 @@ class DungeonCrawler:
         print(Fore.CYAN + "\nExits:")
         for direction, target in room.exits.items():
             print(f"- {direction.capitalize()}: {self.game_state.rooms[target].title}")
-        
-        # Show combat options if in combat
-        if self.combat_manager.in_combat:
-            print(Fore.GREEN + "\nCombat Options:")
-            print("- attack: Attack the enemy")
-            if self.game_state.player_class == "wizard":
-                print("- cast fireball: Cast a fireball spell")
-                print("- cast shield: Create a magical shield")
-                print("- cast heal: Heal yourself")
-            print("- flee: Attempt to flee from combat")
 
     def move_player(self, direction: str) -> bool:
         """Attempt to move the player in the given direction"""
@@ -380,14 +370,14 @@ class DungeonCrawler:
                 self.game_over()
             else:
                 self.game_state.health = self.combat_manager.player_health
-                if self.combat_manager.enemy and self.combat_manager.enemy.health <= 0:
+                # Store enemy type before ending combat
+                current_room = self.game_state.rooms[self.game_state.current_room]
+                if current_room.enemy:
+                    enemy_type = current_room.enemy['type']
+                    # Increment counter and add to defeated set
                     self.game_state.enemies_defeated += 1
-                    # Remove enemy from the room after defeat
-                    current_room = self.game_state.rooms[self.game_state.current_room]
-                    if current_room.enemy:
-                        # Add to defeated enemies set
-                        self.game_state.defeated_enemies.add(f"{self.game_state.current_room}_{current_room.enemy['type']}")
-                        current_room.enemy = None
+                    self.game_state.defeated_enemies.add(f"{self.game_state.current_room}_{enemy_type}")
+                    current_room.enemy = None
                     print(Fore.GREEN + f"\nEnemies defeated: {self.game_state.enemies_defeated}" + Style.RESET_ALL)
                     self.display_debug_info()  # Show updated stats
 
@@ -412,14 +402,6 @@ __     ______  _    _   _      ____   _____ ______
                 self.display_debug_info()
             
             if self.combat_manager.in_combat:
-                # Show combat options
-                print(Fore.GREEN + "\nCombat Options:")
-                print("- attack: Attack the enemy")
-                if self.game_state.player_class == "wizard":
-                    print("- cast fireball: Cast a fireball spell")
-                    print("- cast shield: Create a magical shield")
-                    print("- cast heal: Heal yourself")
-                print("- flee: Attempt to flee from combat")
                 print(Fore.CYAN + "\nEnter your action: " + Style.RESET_ALL, end='')
             else:
                 print(Fore.CYAN + "\nEnter command (n/s/e/w for movement, :d for debug, q to quit): " + Style.RESET_ALL, end='')

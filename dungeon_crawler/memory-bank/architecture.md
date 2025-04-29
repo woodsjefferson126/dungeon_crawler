@@ -45,13 +45,26 @@
 
 ### 4. Combat System (`combat.py`)
 - **Responsibilities:**
-  - Turn-based combat
-  - Damage calculation
-  - Special abilities
+  - Turn-based combat management
+  - Damage calculation and application
+  - Special abilities and spell casting
+  - Combat state tracking
+  - Enemy defeat handling
 - **Key Classes:**
-  - `CombatManager`: Combat flow
-  - `Enemy`: Enemy behavior
-  - `CombatState`: Combat-specific state
+  - `CombatManager`: Combat flow orchestration
+    - Properties: player_health, player_class, enemy, in_combat, shield_active, shield_rounds, mana
+    - Methods: start_combat(), end_combat(), player_attack(), cast_spell(), process_round()
+  - `Enemy`: Enemy behavior and state
+    - Properties: name, health, damage_range, description, hit_chance
+    - Methods: take_damage(), attack()
+- **Implementation Details:**
+  - Color-coded combat text (red for damage, green for success)
+  - Class-specific combat bonuses
+  - Wizard spell system with mana costs
+  - Shield spell damage reduction
+  - Combat state persistence
+  - Enemy defeat tracking
+  - Unit tests for combat mechanics
 
 ### 5. NPC System (`npc.py`)
 - **Responsibilities:**

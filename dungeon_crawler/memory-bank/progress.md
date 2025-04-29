@@ -39,13 +39,13 @@
 - [x] Unit tests
 
 ### Phase 4: Health and Combat System
-- [ ] Player health tracking
-- [ ] Enemy class implementation
-- [ ] Combat flow
-- [ ] Class-based damage
-- [ ] Combat text display
-- [ ] Game over handling
-- [ ] Unit tests
+- [x] Player health tracking
+- [x] Enemy class implementation
+- [x] Combat flow
+- [x] Class-based damage
+- [x] Combat text display
+- [x] Game over handling
+- [x] Unit tests
 
 ### Phase 5: NPC Interaction System
 - [ ] NPC class implementation
@@ -85,15 +85,18 @@
 ## 📝 Notes
 
 ### Technical Debt
-- None identified yet
+- Combat system could benefit from more extensive error handling
+- Consider adding combat logging for debugging purposes
+- Need to implement proper mana regeneration system
+- Combat balance needs fine-tuning based on player feedback
 
 ### Blockers
 - None identified yet
 
 ### Next Steps
-1. Begin implementation of Health and Combat System
-2. Create Enemy class and combat mechanics
-3. Implement class-based damage calculations
+1. Begin implementation of NPC Interaction System
+2. Implement inventory system for item usage during combat
+3. Add mana regeneration mechanics
 
 ## 📅 Timeline
 
