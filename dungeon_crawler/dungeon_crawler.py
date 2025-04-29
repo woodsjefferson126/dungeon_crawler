@@ -3,8 +3,9 @@
 import sys
 import time
 import random
+import os
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import json
 from colorama import init, Fore, Back, Style
 
@@ -38,6 +39,18 @@ NAME_COMPONENTS = {
 }
 
 @dataclass
+class Room:
+    """Represents a room in the dungeon"""
+    id: str
+    title: str
+    description: str
+    exits: Dict[str, str]
+    dark: bool
+    items: List[str]
+    enemy: Optional[Dict[str, Any]]
+    npc: Optional[Dict[str, Any]]
+
+@dataclass
 class GameState:
     """Tracks the current state of the game"""
     player_name: str
@@ -51,6 +64,7 @@ class GameState:
     items_used: int
     start_time: float
     debug_mode: bool = False
+    rooms: Dict[str, Room] = None
 
 class DungeonCrawler:
     def __init__(self):
@@ -66,9 +80,34 @@ class DungeonCrawler:
             enemies_defeated=0,
             items_used=0,
             start_time=time.time(),
-            debug_mode=False
+            debug_mode=False,
+            rooms={}
         )
         self.running: bool = True
+        self.load_rooms()
+
+    def load_rooms(self):
+        """Load room data from JSON file"""
+        try:
+            with open(os.path.join(os.path.dirname(__file__), 'data', 'rooms.json'), 'r') as f:
+                room_data = json.load(f)
+                for room_id, data in room_data.items():
+                    self.game_state.rooms[room_id] = Room(
+                        id=room_id,
+                        title=data['title'],
+                        description=data['description'],
+                        exits=data['exits'],
+                        dark=data['dark'],
+                        items=data['items'],
+                        enemy=data['enemy'],
+                        npc=data['npc']
+                    )
+        except FileNotFoundError:
+            print(Fore.RED + "Error: rooms.json not found!" + Style.RESET_ALL)
+            sys.exit(1)
+        except json.JSONDecodeError:
+            print(Fore.RED + "Error: Invalid JSON in rooms.json!" + Style.RESET_ALL)
+            sys.exit(1)
 
     def display_title(self):
         """Display the game's title screen with ASCII art"""
@@ -175,6 +214,53 @@ class DungeonCrawler:
             print(f"  {flag}: {value}")
         print("=================" + Style.RESET_ALL)
 
+    def display_room(self):
+        """Display the current room's information"""
+        room = self.game_state.rooms[self.game_state.current_room]
+        
+        # Check if room is dark and player has a torch
+        is_dark = room.dark and "Torch" not in self.game_state.inventory
+        
+        print(Fore.YELLOW + f"\n{room.title}" + Style.RESET_ALL)
+        
+        if is_dark:
+            print(Fore.RED + "It's too dark to see anything!" + Style.RESET_ALL)
+        else:
+            print(Fore.WHITE + room.description + Style.RESET_ALL)
+            
+            # Display items if any
+            if room.items:
+                print(Fore.CYAN + "\nItems in the room:")
+                for item in room.items:
+                    print(f"- {item}")
+            
+            # Display NPC if present
+            if room.npc:
+                print(Fore.BLUE + f"\n{room.npc['name']} is here:")
+                print(room.npc['description'])
+            
+            # Display enemy if present
+            if room.enemy:
+                print(Fore.RED + f"\n{room.enemy['name']} is here!")
+                print(room.enemy['description'])
+        
+        # Always show exits
+        print(Fore.CYAN + "\nExits:")
+        for direction, target in room.exits.items():
+            print(f"- {direction.capitalize()}: {self.game_state.rooms[target].title}")
+
+    def move_player(self, direction: str) -> bool:
+        """Attempt to move the player in the given direction"""
+        current_room = self.game_state.rooms[self.game_state.current_room]
+        
+        if direction not in current_room.exits:
+            print(Fore.RED + f"You can't go {direction} from here!" + Style.RESET_ALL)
+            return False
+        
+        self.game_state.current_room = current_room.exits[direction]
+        self.game_state.steps_taken += 1
+        return True
+
     def handle_command(self, command: str) -> None:
         """Process user commands"""
         if command == 'q':
@@ -184,14 +270,25 @@ class DungeonCrawler:
             if self.game_state.debug_mode:
                 self.display_debug_info()
             print(f"Debug mode: {'on' if self.game_state.debug_mode else 'off'}")
-        # More commands will be added here
+        elif command in ['n', 's', 'e', 'w']:
+            direction_map = {
+                'n': 'north',
+                's': 'south',
+                'e': 'east',
+                'w': 'west'
+            }
+            if self.move_player(direction_map[command]):
+                self.display_room()
+        else:
+            print(Fore.RED + "Invalid command. Use n, s, e, w for movement, :d for debug mode, or q to quit." + Style.RESET_ALL)
 
     def main_loop(self):
         """Main game loop"""
+        self.display_room()  # Show initial room
         while self.running:
             if self.game_state.debug_mode:
                 self.display_debug_info()
-            command = self.get_input("\nEnter command (q to quit): ")
+            command = self.get_input("\nEnter command (n/s/e/w for movement, :d for debug, q to quit): ")
             self.handle_command(command)
 
     def run(self):
