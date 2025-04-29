@@ -57,7 +57,7 @@ pip freeze > requirements.txt
 ### 5. Create main.py entry point
 
 - Scaffold very basic game loop
-
+- Create initial tests
 
 ### 6. Make Initial Git Commit
 ```bash
