@@ -5,9 +5,10 @@ import time
 import random
 import os
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Set
 import json
 from colorama import init, Fore, Back, Style
+from .combat import Enemy, CombatManager
 
 # Initialize colorama
 init()
@@ -65,6 +66,11 @@ class GameState:
     start_time: float
     debug_mode: bool = False
     rooms: Dict[str, Room] = None
+    defeated_enemies: Set[str] = None  # Track which enemies have been defeated
+
+    def __post_init__(self):
+        if self.defeated_enemies is None:
+            self.defeated_enemies = set()
 
 class DungeonCrawler:
     def __init__(self):
@@ -81,10 +87,16 @@ class DungeonCrawler:
             items_used=0,
             start_time=time.time(),
             debug_mode=False,
-            rooms={}
+            rooms={},
+            defeated_enemies=set()
         )
         self.running: bool = True
         self.load_rooms()
+        self.load_enemies()
+        self.combat_manager = CombatManager(
+            player_health=self.game_state.health,
+            player_class=self.game_state.player_class
+        )
 
     def load_rooms(self):
         """Load room data from JSON file"""
@@ -108,6 +120,40 @@ class DungeonCrawler:
         except json.JSONDecodeError:
             print(Fore.RED + "Error: Invalid JSON in rooms.json!" + Style.RESET_ALL)
             sys.exit(1)
+
+    def load_enemies(self):
+        """Load enemy data from JSON file"""
+        try:
+            with open(os.path.join(os.path.dirname(__file__), 'data', 'enemies.json'), 'r') as f:
+                self.enemies = json.load(f)
+        except FileNotFoundError:
+            print(Fore.RED + "Error: enemies.json not found!" + Style.RESET_ALL)
+            sys.exit(1)
+        except json.JSONDecodeError:
+            print(Fore.RED + "Error: Invalid JSON in enemies.json!" + Style.RESET_ALL)
+            sys.exit(1)
+
+    def create_enemy(self, enemy_type: str) -> Enemy:
+        """Create an enemy instance from the enemy data"""
+        if enemy_type not in self.enemies:
+            raise ValueError(f"Unknown enemy type: {enemy_type}")
+        
+        data = self.enemies[enemy_type]
+        enemy = Enemy(
+            name=data['name'],
+            health=data['health'],
+            damage_range=tuple(data['damage_range']),
+            description=data['description'],
+            hit_chance=data.get('hit_chance', 0.3)
+        )
+        
+        # Initialize combat manager with current player state
+        self.combat_manager = CombatManager(
+            player_health=self.game_state.health,
+            player_class=self.game_state.player_class
+        )
+        
+        return enemy
 
     def display_title(self):
         """Display the game's title screen with ASCII art"""
@@ -248,6 +294,16 @@ class DungeonCrawler:
         print(Fore.CYAN + "\nExits:")
         for direction, target in room.exits.items():
             print(f"- {direction.capitalize()}: {self.game_state.rooms[target].title}")
+        
+        # Show combat options if in combat
+        if self.combat_manager.in_combat:
+            print(Fore.GREEN + "\nCombat Options:")
+            print("- attack: Attack the enemy")
+            if self.game_state.player_class == "wizard":
+                print("- cast fireball: Cast a fireball spell")
+                print("- cast shield: Create a magical shield")
+                print("- cast heal: Heal yourself")
+            print("- flee: Attempt to flee from combat")
 
     def move_player(self, direction: str) -> bool:
         """Attempt to move the player in the given direction"""
@@ -257,13 +313,24 @@ class DungeonCrawler:
             print(Fore.RED + f"You can't go {direction} from here!" + Style.RESET_ALL)
             return False
         
-        self.game_state.current_room = current_room.exits[direction]
+        target_room_id = current_room.exits[direction]
+        target_room = self.game_state.rooms[target_room_id]
+        
+        # Check if the target room has a defeated enemy
+        if target_room.enemy and f"{target_room_id}_{target_room.enemy['type']}" in self.game_state.defeated_enemies:
+            target_room.enemy = None
+        
+        self.game_state.current_room = target_room_id
         self.game_state.steps_taken += 1
         return True
 
     def handle_command(self, command: str) -> None:
         """Process user commands"""
-        if command == 'q':
+        if self.combat_manager.in_combat:
+            self.handle_combat_command(command)
+            return
+        
+        if command in ['q', ':q']:
             self.running = False
         elif command == ':d':
             self.game_state.debug_mode = not self.game_state.debug_mode
@@ -279,8 +346,63 @@ class DungeonCrawler:
             }
             if self.move_player(direction_map[command]):
                 self.display_room()
+                # Check for enemy in the new room
+                current_room = self.game_state.rooms[self.game_state.current_room]
+                if current_room.enemy:
+                    enemy = self.create_enemy(current_room.enemy['type'])
+                    self.combat_manager.start_combat(enemy)
         else:
             print(Fore.RED + "Invalid command. Use n, s, e, w for movement, :d for debug mode, or q to quit." + Style.RESET_ALL)
+
+    def handle_combat_command(self, command: str) -> None:
+        """Handle combat-specific commands"""
+        if not self.combat_manager.in_combat:
+            print(Fore.RED + "You're not in combat!" + Style.RESET_ALL)
+            return
+        
+        # Handle special commands even during combat
+        if command in ['q', ':q']:
+            self.running = False
+            return
+        elif command == ':d':
+            self.game_state.debug_mode = not self.game_state.debug_mode
+            if self.game_state.debug_mode:
+                self.display_debug_info()
+            print(f"Debug mode: {'on' if self.game_state.debug_mode else 'off'}")
+            return
+        
+        # Process combat action
+        ended, message = self.combat_manager.process_round(command)
+        print(message)
+        
+        if ended:
+            if self.combat_manager.player_health <= 0:
+                self.game_over()
+            else:
+                self.game_state.health = self.combat_manager.player_health
+                if self.combat_manager.enemy and self.combat_manager.enemy.health <= 0:
+                    self.game_state.enemies_defeated += 1
+                    # Remove enemy from the room after defeat
+                    current_room = self.game_state.rooms[self.game_state.current_room]
+                    if current_room.enemy:
+                        # Add to defeated enemies set
+                        self.game_state.defeated_enemies.add(f"{self.game_state.current_room}_{current_room.enemy['type']}")
+                        current_room.enemy = None
+                    print(Fore.GREEN + f"\nEnemies defeated: {self.game_state.enemies_defeated}" + Style.RESET_ALL)
+                    self.display_debug_info()  # Show updated stats
+
+    def game_over(self):
+        """Handle game over state"""
+        print(Fore.RED + r"""
+__     ______  _    _   _      ____   _____ ______ 
+\ \   / / __ \| |  | | | |    / __ \ / ____|  ____|
+ \ \_/ / |  | | |  | | | |   | |  | | (___ | |__   
+  \   /| |  | | |  | | | |   | |  | |\___ \|  __|  
+   | | | |__| | |__| | | |___| |__| |____) | |____ 
+   |_|  \____/ \____/  |______\____/|_____/|______|
+""" + Style.RESET_ALL)
+        print(Fore.RED + "You have died in great pain!" + Style.RESET_ALL)
+        self.running = False
 
     def main_loop(self):
         """Main game loop"""
@@ -288,7 +410,21 @@ class DungeonCrawler:
         while self.running:
             if self.game_state.debug_mode:
                 self.display_debug_info()
-            command = self.get_input("\nEnter command (n/s/e/w for movement, :d for debug, q to quit): ")
+            
+            if self.combat_manager.in_combat:
+                # Show combat options
+                print(Fore.GREEN + "\nCombat Options:")
+                print("- attack: Attack the enemy")
+                if self.game_state.player_class == "wizard":
+                    print("- cast fireball: Cast a fireball spell")
+                    print("- cast shield: Create a magical shield")
+                    print("- cast heal: Heal yourself")
+                print("- flee: Attempt to flee from combat")
+                print(Fore.CYAN + "\nEnter your action: " + Style.RESET_ALL, end='')
+            else:
+                print(Fore.CYAN + "\nEnter command (n/s/e/w for movement, :d for debug, q to quit): " + Style.RESET_ALL, end='')
+            
+            command = input().strip().lower()
             self.handle_command(command)
 
     def run(self):
