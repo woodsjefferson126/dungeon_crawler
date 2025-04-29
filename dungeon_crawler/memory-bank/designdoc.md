@@ -98,9 +98,52 @@ The game uses Colorama for colorful CLI output.
 3. **Name Selection:** A random D&D-style name is suggested or user can pick their own.
 4. **Starting Equipment:** Torch (stackable) and a basic dagger.
 
+## Game progress tracking
+
+Room Discovery:
+* Discovered rooms marked with * after name in map view
+* Only shows rooms player has visited
+
+Statistics Tracking:
+* Game time elapsed
+* Number of enemies defeated
+* Items used
+* Steps taken
 
 
 # 🗺️ Room Structure & Compass Navigation
+
+## Dungeon and room generation
+
+* Rooms are randomly generated
+* Connections are randomly generated
+* Recommended Room Layout Strategy:
+  1. Room Generation Rules:
+    * Generate exactly 20 rooms
+    * One entry room (fixed as starting point)
+    * One boss room (must be at least 10 rooms away from entry)
+  * 18 regular rooms with varying types:
+    * Combat rooms (40%): Contains enemies
+    * Treasure rooms (20%): Contains items/loot
+    * Empty rooms (20%): Just description and atmosphere
+    * NPC rooms (15%): Contains friendly/neutral NPCs
+    * Special rooms (5%): Unique puzzles or events
+  2. Connection Rules:
+    * Every room must be reachable
+    * No dead ends (except boss room)
+    * Each room should have 1-4 connections
+    * Include some loops for exploration
+    * Some connections can be locked (requiring keys)
+    * Some rooms can be dark (requiring torch)
+  3. Generation Algorithm:
+    * Create entry room
+    * Place boss room far from entry
+    * Fill space between with randomly typed rooms
+    * Generate connections ensuring:
+      * All rooms are accessible
+      * Path complexity increases towards boss
+      * Multiple possible paths to most rooms
+
 
 ## 🧱 Room Format
 
@@ -172,13 +215,15 @@ Each dungeon has one boss located in a random room. They have more health and do
 Combat is turn-based. Each turn, player or enemy can:
 * Attack, players have a 50% chance of doing damage. Monsters have a 30% chance. Damage varies by NPC.
 * Use item, e.g. invisibility potion
-* Cast spell (wizard only)
+* Cast spell (wizard only). Note each spell (Fireball, Shield, Heal) can be used once per enemy encounte
   * `Fireball`: Heavy damage (5-20 HP)
   * `Shield`: Damage reduced by 50% for next 3 rounds
   * `Heal`: 30% HP restored
 * Flee with a chance of success.
 
-
+Combat initiation:
+* Player always gets a chance to flee before combat starts
+* If player doesn't flee, combat begins
 
 
 # 🧑‍🤝‍🧑 Friendly/Neutral NPC System
@@ -190,16 +235,34 @@ Stored as JSON:
 * Dialogue tree with interaction options, e.g. give gold, provide hints for boss fight
 
 
+## Hostility mechanics
 
-## 🛣️ NPC Interaction Flow
+* 5% chance per interaction to become hostile
+* Once hostile, NPC remains hostile permanently for that playthrough
+* Hostile NPCs have different dialogue options
+* Combat works as per monsters
 
-Choose dialogue options and affect the game state.
+State persistence:
+* NPC state (friendly/hostile) persists even if player leaves and returns
+* Previous interactions are remembered
+
 
 
 
 # 🎒 Inventory System
 
-Player can carry up to 5 items. Examples include:
+* Maximum 5 items total in inventory
+* Stackable items:
+  * Maximum stack size: 5 per type
+  * Examples of stackable items: Torch, Healing Herb, Bomb
+* When inventory is full:
+  * Player is prompted to swap new item with an existing item
+  * Player can cancel the swap to keep existing inventory
+* No manual dropping or destroying of items
+* Non-stackable items (like Iron Key, Ancient Tome) take one slot each
+
+
+Examples inventory:
 
 | Item         | Use                           | Stackable |
 | ------------ | ----------------------------- | --------- |
@@ -207,20 +270,27 @@ Player can carry up to 5 items. Examples include:
 | Healing Herb | Heal 20 HP                    | Yes       |
 | Iron Key     | Open specific doors           | No        |
 | Bomb         | Deal 10 HP damage to enemies  | Yes       |
-| Ancient Tome | Provides knowledge for advanced puzzles  |
-| Shiny Sword  | Enhances combat effectiveness            |
-| Golden Key   | Unlocks special treasure rooms           |
+| Ancient Tome | Provides knowledge for advanced puzzles  | No |
+| Shiny Sword  | Enhances combat effectiveness            | No |
+| Golden Key   | Unlocks special treasure rooms           | No |
 
 
 # 🐞 Debug Mode
 
-Toggle `:d` to view internal game state for testing.
-
+* Toggle `:d` to view internal game state for testing.
+* Does not persist between game sessions (resets on game restart)
+* Shows:
+  * Current Room ID and Title
+  * Steps Taken
+  * Health
+  * Inventory (with counts)
+  * Flags
 
 # 🛡️ Save and Load
 
-*  Three save slots.
-*  Friendly error handling for corrupted saves.
+*  Save format JSON
+*  Three save slots. 
+*  Friendly error handling for corrupted saves. Display error message and offer to start new game.
 
 
 # 🔁 Replayability Features
@@ -261,3 +331,6 @@ python dungeon_crawler.py
 * Time-based events (enemy patrols).
 * In-game achievements or lore collectibles.
 * Advanced class upgrades (e.g., Warrior > Knight).
+* Auto-save
+* Magic energy/manna system, spell cooldown
+* Cheat commands in debug mode (like teleporting or healing)?
