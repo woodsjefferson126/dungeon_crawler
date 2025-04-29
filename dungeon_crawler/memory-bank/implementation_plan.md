@@ -65,7 +65,9 @@ git add .
 git commit -m "Initial project setup"
 ```
 
+### 7. github.com
 
+- Archive to github.com remote
 
 ---
 
